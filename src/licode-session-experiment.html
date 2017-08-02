@@ -1,0 +1,95 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="./licode-participant.html">
+<link rel="import" href="./licode-behavior.html">
+<link rel="import" href="./licode-erizo-import.html">
+<!--
+`licode-session-experiment`
+
+
+@demo demo/index.html
+-->
+
+<dom-module id="licode-session-experiment">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    <template is="dom-repeat" items="[[participants]]">
+      <licode-participant participant="[[item]]"></licode-participant>
+    </template>
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'licode-session-experiment',
+
+      behaviors: [
+        LicodeBehavior
+      ],
+
+      properties: {
+
+        participants: {
+          // NOTE(garcianavalon) remember to use array mutation methods
+          // push, pop, splice, shift, unshift
+          type: Array,
+          value: [],
+          observer: '_participantsChanged'
+        },
+
+      },
+
+      listeners: {
+        'access-accepted': 'handleAccessAccepted',
+        'access-denied': 'handleAccessDenied',
+        'screen-access-accepted': 'handleScreenAccessAccepted',
+        'screen-access-denied': 'handleScreenAccessDenied',
+        'room-connected': 'handleRoomConnected',
+        'bandwidth-alert': 'handleBandwidthAlert',
+        'stream-attributes-update': 'handleStreamAttributesUpdate',
+        'stream-subscribed': 'handleStreamSubscribed',
+        'stream-added': 'handleStreamAdded',
+        'stream-removed': 'handleStreamRemoved',
+      }
+
+      handleAccessAccepted: function(evt) {
+
+      },
+      handleAccessDenied: function(evt) {
+
+      },
+      handleScreenAccessAccepted: function(evt) {
+
+      },
+      handleScreenAccessDenied: function(evt) {
+
+      },
+      handleRoomConnected: function(evt) {
+
+      },
+      handleBandwidthAlert: function(evt) {
+
+      },
+      handleStreamAttributesUpdate: function(evt) {
+
+      },
+      handleStreamSubscribed: function(evt) {
+        this.push(participants, )
+      },
+      handleStreamAdded: function(evt) {
+
+      },
+      handleStreamRemoved: function(evt) {
+
+      },
+
+      _participantsChanged: function(oldValue, newValue) {
+        console.log('participants changed to %o from %o', newValue, oldValue);
+      },
+
+    });
+  </script>
+</dom-module>

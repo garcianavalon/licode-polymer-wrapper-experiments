@@ -1,0 +1,198 @@
+<script>
+  LicodeBehavior = {
+    properties: {
+      licodeId: {
+        type: String,
+      },
+      // TODO(garcianavalon) figure out this numbers!
+      minVideoBW: {
+        type: Number,
+        value: 1000,
+      },
+
+      maxVideoBW: {
+        type: Number,
+        value: 2000,
+      },
+
+      scheme:{
+        type: String,
+        value: "notify-break",
+      },
+
+      videoSize: {
+        type: Array,
+        // format [minWidth, minHeight, maxWidth, maxHeight]
+        value: [1024, 768, 1920, 1080],
+      }
+
+      token: {
+        type: String,
+      },
+
+      room: {
+        type: Object,
+      }
+    },
+
+    connectToRoom: function() {
+      this.room = Erizo.Room({token: this.licodeToken});
+      this.room.addEventListener("room-connected", this._onRoomConnected.bind(this));
+      this.room.addEventListener("stream-subscribed", this._onStreamSubscribed.bind(this));
+      this.room.addEventListener("stream-added", this._onStreamAdded.bind(this));
+      this.room.addEventListener("stream-removed", this._onStreamRemoved.bind(this));
+      this.room.connect();
+    },
+
+    disconnectFromRoom: function(){
+      // TODO(garcianavalon) do we need to unsubscribe from remote ones?
+      this._closeLocalStreams();
+      if(this.room){
+        this.room.disconnect();
+      }
+    },
+
+    _closeLocalStreams: function(){
+      for (var i = 0; i < this.room.localStreams.length; i++) {
+        var stream = this.room.localStreams[i];
+        stream.close();
+      }
+    },
+
+    _buildErizoAttributes: function(extraAttributes){
+      // Base licode attributes
+      var baseAttributes = {
+        maxVideoBW: this.maxVideoBW,
+        minVideoBW: this.minVideoBW,
+        scheme: this.scheme,
+      };
+
+      // Add extra licode attributes
+      baseAttributes = Object.assign(baseAttributes, extraAttributes);
+
+      return baseAttributes;
+    },
+
+    initLocalStream: function(extraAttributes){
+      if(!this.room) {
+        // TODO(garcianavalon) verify if this is required or not
+        console.error('Can\'t start stream, room is not initialized');
+        return;
+      }
+
+			var stream = Erizo.Stream({
+        audio: true,
+        video: true,
+        data: true,
+        attributes: this._buildErizoAttributes(extraAttributes),
+      });
+
+      stream.addEventListener("access-accepted", this._onAccessAccepted.bind(this));
+      stream.addEventListener("access-denied", this._onAccessDenied.bind(this));
+			stream.init();
+    },
+
+    initScreenSharing: function(extraAttributes){
+      // TODO(garcianavalon) merge with initLocalStream
+      // Make sure we are using the screen flag
+      extraAttributes.media = 'screen'
+			var stream = Erizo.Stream({
+        screen: true,
+        data: true,
+        videoSize: this.videoSize,
+        attributes: this._buildErizoAttributes(extraAttributes)
+      };
+
+			stream.addEventListener("access-accepted", this._onScreenAccessAccepted.bind(this));
+      stream.addEventListener("access-denied", this._onScreenAccessDenied.bind(this));
+			stream.init();
+    },
+
+    _onAccessAccepted: function(stream){
+      // TODO(garcianavalon) verify this actually works
+      for (var i = 0; i < this.room.localStreams.length; i++) {
+        var stream = this.room.localStreams[i];
+        // TODO(garcianavalon) this needs to be handled differently
+        stream.play()
+        this.room.publish(stream);
+      }
+      this.fire('access-accepted', {});
+
+    },
+
+    _onAccessDenied: function(stream){
+      // TODO(garcianavalon) handle this
+      this.fire('access-denied', {});
+    },
+
+    _onScreenAccessAccepted: function(stream){
+      this.room.publish(stream);
+      this.fire('screen-access-accepted', {});
+    },
+
+    _onScreenAccessDenied: function(evt){
+      console.log("_onAccessDenied %o", evt);
+      // TODO(garcianavalon) handle this
+      this.fire('screen-access-denied', {});
+    },
+
+    _onRoomConnected: function(roomEvent){
+      console.log("_onRoomConnected %o", roomEvent);
+      this.subscribeToStreams(roomEvent.streams);
+      this.fire('room-connected', {});
+    },
+
+    subscribeToStreams: function(streams){
+      console.log("subscribeToStreams");
+
+      for (var index in streams) {
+        var stream = streams[index];
+
+        if(stream.local){
+          // NOTE(garcianavalon) never subscribe to local streams :)
+          continue;
+        }
+
+        console.log("Susbcribing to stream %s", stream.getID());
+        this.room.subscribe(stream);
+        stream.addEventListener("bandwidth-alert", this._onBandwidthAlert.bind(this));
+      }
+    },
+
+    _onBandwidthAlert: function(streamEvent){
+      console.log("_onBandwidthAlert %o", streamEvent);
+      this.fire('bandwidth-alert', {});
+    },
+
+    _onStreamAttributesUpdate: function(streamEvent){
+      console.log("_onStreamAttributesUpdate %o", streamEvent);
+      var stream = streamEvent.stream;
+		  var id = stream.elementID;
+		  var attrs = stream.getAttributes();
+      // TODO(garcianavalon) handle this stuff
+      this.fire('stream-attributes-update', {});
+    },
+
+    _onStreamSubscribed: function(streamEvent){
+      console.log("_onStreamSubscribed %o", streamEvent);
+      var stream = streamEvent.stream;
+      stream.addEventListener('stream-attributes-update', this._onStreamAttributesUpdate.bind(this));
+      // TODO(garcianavalon) show the stream somewhere
+      this.fire('stream-subscribed', {});
+    },
+
+    _onStreamAdded: function(streamEvent){
+      console.log("_onStreamAdded %o", streamEvent);
+      var stream = streamEvent.stream;
+      this.subscribeToStreams([stream]);
+      this.fire('stream-added', {});
+    },
+
+    _onStreamRemoved: function(streamEvent){
+      console.log("_onStreamRemoved %o", streamEvent);
+      // TODO(garcianavalon) handle this stuff
+      this.fire('stream-removed', {});
+    },
+
+  }
+</script>
